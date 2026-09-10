@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SURYA CUE</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="top-bar">
+        <div class="logo">
+            <span class="logo-dot"></span>
+            SURYA CUE
+        </div>
+
+        <div class="subtitle">
+            STAGE AUDIO CONTROL
+        </div>
+    </header>
+
+    <main class="soundboard">
+
+        <div class="welcome">
+            <h1>Your Soundboard</h1>
+            <p>Load your tracks and control them from one place.</p>
+        </div>
+
+        <!-- SOUND BOARD SETUP -->
+
+        <section
+            class="setup-panel"
+            style="
+                background:#1a1a1a;
+                border:1px solid #303030;
+                border-radius:14px;
+                padding:16px;
+                margin-bottom:22px;
+                display:flex;
+                align-items:center;
+                gap:12px;
+                flex-wrap:wrap;
+            "
+        >
+
+            <div
+                style="
+                    color:#999999;
+                    font-size:10px;
+                    font-weight:700;
+                    letter-spacing:1px;
+                "
+            >
+                TRACKS
+            </div>
+
+            <input
+                id="track-count"
+                type="number"
+                min="1"
+                max="100"
+                value="12"
+                style="
+                    width:80px;
+                    padding:10px;
+                    background:#111111;
+                    color:#ffffff;
+                    border:1px solid #3b3b3b;
+                    border-radius:7px;
+                    font-size:13px;
+                    outline:none;
+                "
+            >
+
+            <button
+                id="create-board-button"
+                style="
+                    background:#ff6a00;
+                    color:#ffffff;
+                    border:1px solid #ff6a00;
+                    padding:11px 15px;
+                    border-radius:8px;
+                    font-size:10px;
+                    font-weight:700;
+                    letter-spacing:1px;
+                    cursor:pointer;
+                "
+            >
+                CREATE SOUNDBOARD
+            </button>
+
+            <button
+                id="save-setup-button"
+                style="
+                    background:#292929;
+                    color:#ffffff;
+                    border:1px solid #3b3b3b;
+                    padding:11px 15px;
+                    border-radius:8px;
+                    font-size:10px;
+                    font-weight:700;
+                    letter-spacing:1px;
+                    cursor:pointer;
+                "
+            >
+                SAVE SETUP
+            </button>
+
+            <button
+                id="clear-setup-button"
+                style="
+                    background:#292929;
+                    color:#ffffff;
+                    border:1px solid #3b3b3b;
+                    padding:11px 15px;
+                    border-radius:8px;
+                    font-size:10px;
+                    font-weight:700;
+                    letter-spacing:1px;
+                    cursor:pointer;
+                "
+            >
+                CLEAR SAVED SETUP
+            </button>
+
+            <span
+                id="save-status"
+                style="
+                    color:#20d47a;
+                    font-size:10px;
+                    font-weight:700;
+                    letter-spacing:1px;
+                "
+            >
+                AUTO-SAVE READY
+            </span>
+
+        </section>
+
+
+        <!-- TRACKS ARE CREATED HERE -->
+
+        <section class="tracks" id="tracks-container"></section>
+
+    </main>
+
+    <footer>
+        SURYACUE
+    </footer>
+
+    <script src="script.js?v=3"></script>
+
+</body>
+</html>
