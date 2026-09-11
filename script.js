@@ -1,8 +1,7 @@
 /* =========================================================
    SURYACUE
-   DYNAMIC SOUNDBOARD + AUTO SAVE
+   DYNAMIC SOUNDBOARD + AUTO SAVE + SHOW LIBRARY
    ========================================================= */
-
 
 /* =========================================================
    DATABASE
@@ -13,12 +12,12 @@ const DB_VERSION = 1;
 const STORE_NAME = "soundboard";
 
 let database = null;
-
 let tracks = [];
-
 let isRestoring = false;
 let saveTimer = null;
 
+let currentShowId = null;
+let currentShowName = null;
 
 /* =========================================================
    OPEN DATABASE
@@ -33,7 +32,6 @@ function openDatabase() {
                 DB_NAME,
                 DB_VERSION
             );
-
 
         request.onupgradeneeded =
             function (event) {
@@ -50,9 +48,10 @@ function openDatabase() {
                     db.createObjectStore(
                         STORE_NAME
                     );
-                }
-            };
 
+                }
+
+            };
 
         request.onsuccess =
             function (event) {
@@ -61,8 +60,8 @@ function openDatabase() {
                     event.target.result;
 
                 resolve(database);
-            };
 
+            };
 
         request.onerror =
             function () {
@@ -70,11 +69,12 @@ function openDatabase() {
                 reject(
                     request.error
                 );
+
             };
 
     });
-}
 
+}
 
 /* =========================================================
    DATABASE SAVE
@@ -101,13 +101,12 @@ function databasePut(key, value) {
                 key
             );
 
-
         request.onsuccess =
             function () {
 
                 resolve();
-            };
 
+            };
 
         request.onerror =
             function () {
@@ -115,11 +114,12 @@ function databasePut(key, value) {
                 reject(
                     request.error
                 );
+
             };
 
     });
-}
 
+}
 
 /* =========================================================
    DATABASE GET
@@ -145,15 +145,14 @@ function databaseGet(key) {
                 key
             );
 
-
         request.onsuccess =
             function () {
 
                 resolve(
                     request.result
                 );
-            };
 
+            };
 
         request.onerror =
             function () {
@@ -161,11 +160,12 @@ function databaseGet(key) {
                 reject(
                     request.error
                 );
+
             };
 
     });
-}
 
+}
 
 /* =========================================================
    DATABASE DELETE
@@ -191,13 +191,12 @@ function databaseDelete(key) {
                 key
             );
 
-
         request.onsuccess =
             function () {
 
                 resolve();
-            };
 
+            };
 
         request.onerror =
             function () {
@@ -205,11 +204,12 @@ function databaseDelete(key) {
                 reject(
                     request.error
                 );
+
             };
 
     });
-}
 
+}
 
 /* =========================================================
    UI REFERENCES
@@ -245,6 +245,40 @@ const saveStatus =
         "save-status"
     );
 
+const newShowButton =
+    document.getElementById(
+        "new-show-button"
+    );
+
+const showNameInput =
+    document.getElementById(
+        "show-name-input"
+    );
+
+const saveShowButton =
+    document.getElementById(
+        "save-show-button"
+    );
+
+const showSelect =
+    document.getElementById(
+        "show-select"
+    );
+
+const loadShowButton =
+    document.getElementById(
+        "load-show-button"
+    );
+
+const deleteShowButton =
+    document.getElementById(
+        "delete-show-button"
+    );
+
+const showStatus =
+    document.getElementById(
+        "show-status"
+    );
 
 /* =========================================================
    SAVE STATUS
@@ -254,8 +288,19 @@ function setSaveStatus(text) {
 
     saveStatus.textContent =
         text;
+
 }
 
+/* =========================================================
+   SHOW STATUS
+   ========================================================= */
+
+function setShowStatus(text) {
+
+    showStatus.textContent =
+        text;
+
+}
 
 /* =========================================================
    FORMAT TIME
@@ -266,6 +311,7 @@ function formatTime(seconds) {
     if (!isFinite(seconds)) {
 
         return "00:00";
+
     }
 
     seconds =
@@ -287,8 +333,8 @@ function formatTime(seconds) {
     return String(minutes).padStart(2, "0") +
         ":" +
         String(remainingSeconds).padStart(2, "0");
-}
 
+}
 
 /* =========================================================
    SCHEDULE AUTO SAVE
@@ -297,7 +343,9 @@ function formatTime(seconds) {
 function scheduleAutoSave() {
 
     if (isRestoring) {
+
         return;
+
     }
 
     clearTimeout(
@@ -317,8 +365,8 @@ function scheduleAutoSave() {
             },
             700
         );
-}
 
+}
 
 /* =========================================================
    COLLECT SETUP
@@ -379,10 +427,11 @@ function collectSetup() {
                         Number(
                             item.fadeOutDurationInput.value
                         )
+
                 };
+
             }
         );
-
 
     return {
 
@@ -394,18 +443,21 @@ function collectSetup() {
 
         savedAt:
             Date.now()
+
     };
+
 }
 
-
 /* =========================================================
-   SAVE SETUP
+   SAVE CURRENT SETUP
    ========================================================= */
 
 async function saveSetup() {
 
     if (!database) {
+
         return;
+
     }
 
     try {
@@ -432,9 +484,619 @@ async function saveSetup() {
         setSaveStatus(
             "SAVE ERROR"
         );
+
     }
+
 }
 
+/* =========================================================
+   SHOW LIBRARY DATA
+   ========================================================= */
+
+async function getShowLibrary() {
+
+    const library =
+        await databaseGet(
+            "showLibrary"
+        );
+
+    if (
+        !library ||
+        !Array.isArray(library.shows)
+    ) {
+
+        return {
+            shows: []
+        };
+
+    }
+
+    return library;
+
+}
+
+/* =========================================================
+   REFRESH SHOW SELECT
+   ========================================================= */
+
+async function refreshShowList() {
+
+    try {
+
+        const library =
+            await getShowLibrary();
+
+        showSelect.innerHTML =
+            "";
+
+        if (
+            library.shows.length === 0
+        ) {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                "";
+
+            option.textContent =
+                "NO SAVED SHOWS";
+
+            showSelect.appendChild(
+                option
+            );
+
+            return;
+
+        }
+
+        library.shows.sort(
+            function (a, b) {
+
+                return (
+                    (b.updatedAt || b.createdAt || 0) -
+                    (a.updatedAt || a.createdAt || 0)
+                );
+
+            }
+        );
+
+        library.shows.forEach(
+            function (show) {
+
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+                option.value =
+                    show.id;
+
+                option.textContent =
+                    show.name;
+
+                if (
+                    currentShowId ===
+                    show.id
+                ) {
+
+                    option.selected =
+                        true;
+
+                }
+
+                showSelect.appendChild(
+                    option
+                );
+
+            }
+        );
+
+    } catch (error) {
+
+        console.error(
+            "SURYACUE show list error:",
+            error
+        );
+
+    }
+
+}
+
+/* =========================================================
+   START A NEW BLANK SHOW
+   (does not touch the saved show library in any way)
+   ========================================================= */
+
+async function startNewShow() {
+
+    const hasExistingTracks =
+        tracks.length > 0;
+
+    if (hasExistingTracks) {
+
+        const confirmed =
+            confirm(
+                "Start a new blank show? Any unsaved changes to the " +
+                "current show will be lost. Your saved shows in the " +
+                "library are not affected."
+            );
+
+        if (!confirmed) {
+
+            return;
+
+        }
+
+    }
+
+    currentShowId =
+        null;
+
+    currentShowName =
+        null;
+
+    showNameInput.value =
+        "";
+
+    try {
+
+        if (database) {
+
+            await databaseDelete(
+                "currentShow"
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "SURYACUE new show error:",
+            error
+        );
+
+    }
+
+    createSoundboard(
+        Number(
+            trackCountInput.value
+        ) || 12
+    );
+
+    if (showSelect) {
+
+        showSelect.value =
+            "";
+
+    }
+
+    setShowStatus(
+        "NEW BLANK SHOW — ENTER A NAME AND SAVE"
+    );
+
+}
+
+/* =========================================================
+   SAVE AS NEW SHOW
+   ========================================================= */
+
+async function saveAsShow() {
+
+    if (!database) {
+
+        return;
+
+    }
+
+    let name =
+        showNameInput.value.trim();
+
+    if (!name) {
+
+        alert(
+            "Please enter a show name."
+        );
+
+        showNameInput.focus();
+
+        return;
+
+    }
+
+    const setup =
+        collectSetup();
+
+    if (!setup.tracks.length) {
+
+        alert(
+            "Please create a soundboard first."
+        );
+
+        return;
+
+    }
+
+    try {
+
+        const library =
+            await getShowLibrary();
+
+        const existingShow =
+            library.shows.find(
+                function (show) {
+
+                    return (
+                        show.name.toLowerCase() ===
+                        name.toLowerCase()
+                    );
+
+                }
+            );
+
+        if (existingShow) {
+
+            const overwrite =
+                confirm(
+                    "A show with this name already exists. Replace it?"
+                );
+
+            if (!overwrite) {
+
+                return;
+
+            }
+
+            await databasePut(
+                "show:" + existingShow.id,
+                {
+                    id:
+                        existingShow.id,
+
+                    name:
+                        existingShow.name,
+
+                    setup:
+                        setup,
+
+                    updatedAt:
+                        Date.now()
+                }
+            );
+
+            currentShowId =
+                existingShow.id;
+
+            currentShowName =
+                existingShow.name;
+
+        } else {
+
+            const showId =
+                "show_" +
+                Date.now() +
+                "_" +
+                Math.random()
+                    .toString(36)
+                    .slice(2, 8);
+
+            const showData = {
+
+                id:
+                    showId,
+
+                name:
+                    name,
+
+                setup:
+                    setup,
+
+                createdAt:
+                    Date.now(),
+
+                updatedAt:
+                    Date.now()
+
+            };
+
+            await databasePut(
+                "show:" + showId,
+                showData
+            );
+
+            library.shows.push({
+
+                id:
+                    showId,
+
+                name:
+                    name,
+
+                createdAt:
+                    showData.createdAt,
+
+                updatedAt:
+                    showData.updatedAt
+
+            });
+
+            currentShowId =
+                showId;
+
+            currentShowName =
+                name;
+
+        }
+
+        await databasePut(
+            "showLibrary",
+            library
+        );
+
+        await databasePut(
+            "currentShow",
+            {
+                id:
+                    currentShowId,
+
+                name:
+                    currentShowName
+            }
+        );
+
+        await refreshShowList();
+
+        showSelect.value =
+            currentShowId;
+
+        setShowStatus(
+            "SHOW SAVED ✓"
+        );
+
+        setSaveStatus(
+            "AUTO-SAVED ✓"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "SURYACUE show save error:",
+            error
+        );
+
+        setShowStatus(
+            "SHOW SAVE ERROR"
+        );
+
+    }
+
+}
+
+/* =========================================================
+   LOAD SAVED SHOW
+   ========================================================= */
+
+async function loadSavedShow() {
+
+    const showId =
+        showSelect.value;
+
+    if (!showId) {
+
+        alert(
+            "Please select a saved show first."
+        );
+
+        return;
+
+    }
+
+    try {
+
+        const showData =
+            await databaseGet(
+                "show:" + showId
+            );
+
+        if (
+            !showData ||
+            !showData.setup
+        ) {
+
+            alert(
+                "This saved show could not be found."
+            );
+
+            return;
+
+        }
+
+        const confirmed =
+            confirm(
+                "Load \"" +
+                showData.name +
+                "\"? This will replace the current soundboard."
+            );
+
+        if (!confirmed) {
+
+            return;
+
+        }
+
+        currentShowId =
+            showData.id;
+
+        currentShowName =
+            showData.name;
+
+        isRestoring =
+            true;
+
+        await restoreSetupData(
+            showData.setup
+        );
+
+        isRestoring =
+            false;
+
+        await databasePut(
+            "currentSetup",
+            showData.setup
+        );
+
+        await databasePut(
+            "currentShow",
+            {
+                id:
+                    currentShowId,
+
+                name:
+                    currentShowName
+            }
+        );
+
+        showNameInput.value =
+            currentShowName;
+
+        await refreshShowList();
+
+        setShowStatus(
+            "LOADED: " +
+            currentShowName +
+            " ✓"
+        );
+
+        setSaveStatus(
+            "SHOW RESTORED ✓"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "SURYACUE show load error:",
+            error
+        );
+
+        isRestoring =
+            false;
+
+        setShowStatus(
+            "SHOW LOAD ERROR"
+        );
+
+    }
+
+}
+
+/* =========================================================
+   DELETE SAVED SHOW
+   ========================================================= */
+
+async function deleteSavedShow() {
+
+    const showId =
+        showSelect.value;
+
+    if (!showId) {
+
+        alert(
+            "Please select a saved show first."
+        );
+
+        return;
+
+    }
+
+    try {
+
+        const showData =
+            await databaseGet(
+                "show:" + showId
+            );
+
+        if (!showData) {
+
+            return;
+
+        }
+
+        const confirmed =
+            confirm(
+                "Delete the saved show \"" +
+                showData.name +
+                "\"? This cannot be undone."
+            );
+
+        if (!confirmed) {
+
+            return;
+
+        }
+
+        await databaseDelete(
+            "show:" + showId
+        );
+
+        const library =
+            await getShowLibrary();
+
+        library.shows =
+            library.shows.filter(
+                function (show) {
+
+                    return show.id !== showId;
+
+                }
+            );
+
+        await databasePut(
+            "showLibrary",
+            library
+        );
+
+        if (
+            currentShowId ===
+            showId
+        ) {
+
+            currentShowId =
+                null;
+
+            currentShowName =
+                null;
+
+            showNameInput.value =
+                "";
+
+            await databaseDelete(
+                "currentShow"
+            );
+
+        }
+
+        await refreshShowList();
+
+        setShowStatus(
+            "SHOW DELETED ✓"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "SURYACUE show delete error:",
+            error
+        );
+
+        setShowStatus(
+            "SHOW DELETE ERROR"
+        );
+
+    }
+
+}
 
 /* =========================================================
    CREATE TRACK ELEMENT
@@ -450,46 +1112,58 @@ function createTrackElement(index) {
     track.className =
         "track";
 
-
     const number =
         String(index + 1)
             .padStart(2, "0");
 
-
     track.innerHTML = `
 
         <div class="track-number">
+
             ${number}
+
         </div>
 
         <div class="track-info">
 
             <h2>
+
                 Track ${index + 1}
+
             </h2>
 
             <p>
+
                 No audio loaded
+
             </p>
 
         </div>
 
         <button class="load-button">
+
             LOAD AUDIO
+
         </button>
 
         <button class="play-button">
+
             ▶
+
         </button>
 
         <button class="loop-button">
+
             LOOP OFF
+
         </button>
 
         <div class="volume-control">
 
             <span>
+
                 VOL
+
             </span>
 
             <input
@@ -500,17 +1174,16 @@ function createTrackElement(index) {
             >
 
         </div>
-    `;
 
+    `;
 
     tracksContainer.appendChild(
         track
     );
 
-
     return track;
-}
 
+}
 
 /* =========================================================
    INITIALIZE TRACK
@@ -551,7 +1224,6 @@ function initializeTrack(
             ".track-info p"
         );
 
-
     let audio = null;
     let audioUrl = null;
     let currentFile = null;
@@ -570,7 +1242,6 @@ function initializeTrack(
     let fadeOutActive = false;
     let fadeOutTimer = null;
 
-
     /* =====================================================
        ACTIVITY VISUALIZER
        ===================================================== */
@@ -582,7 +1253,6 @@ function initializeTrack(
 
     activityContainer.className =
         "audio-activity";
-
 
     for (
         let i = 0;
@@ -601,14 +1271,13 @@ function initializeTrack(
         activityContainer.appendChild(
             bar
         );
-    }
 
+    }
 
     track.insertBefore(
         activityContainer,
         loadButton
     );
-
 
     /* =====================================================
        TIMELINE
@@ -622,17 +1291,20 @@ function initializeTrack(
     timelineContainer.className =
         "timeline-container";
 
-
     timelineContainer.innerHTML = `
 
         <div class="timeline-time">
 
             <span class="current-time">
+
                 00:00
+
             </span>
 
             <span class="total-time">
+
                 00:00
+
             </span>
 
         </div>
@@ -651,14 +1323,13 @@ function initializeTrack(
             >
 
         </div>
-    `;
 
+    `;
 
     track.insertBefore(
         timelineContainer,
         loadButton
     );
-
 
     const seekBar =
         timelineContainer.querySelector(
@@ -680,7 +1351,6 @@ function initializeTrack(
             ".range-highlight"
         );
 
-
     /* =====================================================
        RANGE CONTROLS
        ===================================================== */
@@ -693,16 +1363,18 @@ function initializeTrack(
     rangeControls.className =
         "range-controls";
 
-
     rangeControls.innerHTML = `
 
         <button class="range-loop-button">
+
             RANGE OFF
+
         </button>
 
         <div class="range-inputs">
 
             <label>
+
                 START
 
                 <input
@@ -712,9 +1384,11 @@ function initializeTrack(
                     step="0.1"
                     value="0"
                 >
+
             </label>
 
             <label>
+
                 END
 
                 <input
@@ -724,16 +1398,16 @@ function initializeTrack(
                     step="0.1"
                     value="0"
                 >
+
             </label>
 
         </div>
-    `;
 
+    `;
 
     track.appendChild(
         rangeControls
     );
-
 
     const rangeLoopButton =
         rangeControls.querySelector(
@@ -750,7 +1424,6 @@ function initializeTrack(
             ".range-end"
         );
 
-
     /* =====================================================
        FADE CONTROLS
        ===================================================== */
@@ -763,11 +1436,12 @@ function initializeTrack(
     fadeControls.className =
         "fade-controls";
 
-
     fadeControls.innerHTML = `
 
         <button class="fade-in-button">
+
             FADE IN OFF
+
         </button>
 
         <label class="fade-duration">
@@ -786,7 +1460,9 @@ function initializeTrack(
         </label>
 
         <button class="fade-out-button">
+
             FADE OUT
+
         </button>
 
         <label class="fade-duration">
@@ -803,13 +1479,12 @@ function initializeTrack(
             >
 
         </label>
-    `;
 
+    `;
 
     track.appendChild(
         fadeControls
     );
-
 
     const fadeInButton =
         fadeControls.querySelector(
@@ -831,7 +1506,6 @@ function initializeTrack(
             ".fade-out-duration"
         );
 
-
     /* =====================================================
        RANGE HIGHLIGHT
        ===================================================== */
@@ -850,8 +1524,8 @@ function initializeTrack(
                 "0%";
 
             return;
-        }
 
+        }
 
         const startPercent =
             (
@@ -859,17 +1533,14 @@ function initializeTrack(
                 audio.duration
             ) * 100;
 
-
         const endPercent =
             (
                 rangeEnd /
                 audio.duration
             ) * 100;
 
-
         rangeHighlight.style.left =
             startPercent + "%";
-
 
         rangeHighlight.style.width =
             Math.max(
@@ -877,8 +1548,8 @@ function initializeTrack(
                 endPercent -
                 startPercent
             ) + "%";
-    }
 
+    }
 
     /* =====================================================
        LOOP VISUAL
@@ -903,9 +1574,10 @@ function initializeTrack(
 
             loopButton.textContent =
                 "LOOP OFF";
-        }
-    }
 
+        }
+
+    }
 
     /* =====================================================
        RANGE VISUAL
@@ -930,9 +1602,10 @@ function initializeTrack(
 
             rangeLoopButton.textContent =
                 "RANGE OFF";
-        }
-    }
 
+        }
+
+    }
 
     /* =====================================================
        FADE IN VISUAL
@@ -957,9 +1630,10 @@ function initializeTrack(
 
             fadeInButton.textContent =
                 "FADE IN OFF";
-        }
-    }
 
+        }
+
+    }
 
     /* =====================================================
        FADE OUT VISUAL
@@ -984,9 +1658,10 @@ function initializeTrack(
 
             fadeOutButton.textContent =
                 "FADE OUT";
-        }
-    }
 
+        }
+
+    }
 
     /* =====================================================
        ACTIVITY
@@ -1007,9 +1682,10 @@ function initializeTrack(
             track.classList.remove(
                 "playing"
             );
-        }
-    }
 
+        }
+
+    }
 
     /* =====================================================
        STOP FADE TIMERS
@@ -1023,9 +1699,10 @@ function initializeTrack(
                 fadeInTimer
             );
 
-            fadeInTimer = null;
-        }
+            fadeInTimer =
+                null;
 
+        }
 
         if (fadeOutTimer) {
 
@@ -1033,10 +1710,12 @@ function initializeTrack(
                 fadeOutTimer
             );
 
-            fadeOutTimer = null;
-        }
-    }
+            fadeOutTimer =
+                null;
 
+        }
+
+    }
 
     /* =====================================================
        FADE DURATIONS
@@ -1049,31 +1728,32 @@ function initializeTrack(
                 fadeInDurationInput.value
             );
 
-
         if (
             !isFinite(value) ||
             value <= 0
         ) {
 
-            value = 2;
+            value =
+                2;
 
             fadeInDurationInput.value =
                 "2";
-        }
 
+        }
 
         if (value > 60) {
 
-            value = 60;
+            value =
+                60;
 
             fadeInDurationInput.value =
                 "60";
+
         }
 
-
         return value;
-    }
 
+    }
 
     function getFadeOutDuration() {
 
@@ -1082,31 +1762,32 @@ function initializeTrack(
                 fadeOutDurationInput.value
             );
 
-
         if (
             !isFinite(value) ||
             value <= 0
         ) {
 
-            value = 2;
+            value =
+                2;
 
             fadeOutDurationInput.value =
                 "2";
-        }
 
+        }
 
         if (value > 60) {
 
-            value = 60;
+            value =
+                60;
 
             fadeOutDurationInput.value =
                 "60";
+
         }
 
-
         return value;
-    }
 
+    }
 
     /* =====================================================
        FADE IN
@@ -1115,9 +1796,10 @@ function initializeTrack(
     function startFadeIn() {
 
         if (!audio) {
-            return;
-        }
 
+            return;
+
+        }
 
         if (!fadeInEnabled) {
 
@@ -1125,8 +1807,8 @@ function initializeTrack(
                 baseVolume;
 
             return;
-        }
 
+        }
 
         if (fadeInTimer) {
 
@@ -1134,22 +1816,20 @@ function initializeTrack(
                 fadeInTimer
             );
 
-            fadeInTimer = null;
-        }
+            fadeInTimer =
+                null;
 
+        }
 
         const duration =
             getFadeInDuration() *
             1000;
 
-
         const startTime =
             Date.now();
 
-
         audio.volume =
             0;
-
 
         fadeInTimer =
             setInterval(
@@ -1161,16 +1841,16 @@ function initializeTrack(
                             fadeInTimer
                         );
 
-                        fadeInTimer = null;
+                        fadeInTimer =
+                            null;
 
                         return;
-                    }
 
+                    }
 
                     const elapsed =
                         Date.now() -
                         startTime;
-
 
                     const progress =
                         Math.min(
@@ -1179,11 +1859,9 @@ function initializeTrack(
                             1
                         );
 
-
                     audio.volume =
                         baseVolume *
                         progress;
-
 
                     if (
                         progress >= 1
@@ -1193,17 +1871,19 @@ function initializeTrack(
                             fadeInTimer
                         );
 
-                        fadeInTimer = null;
+                        fadeInTimer =
+                            null;
 
                         audio.volume =
                             baseVolume;
+
                     }
 
                 },
                 40
             );
-    }
 
+    }
 
     /* =====================================================
        MANUAL FADE OUT
@@ -1218,22 +1898,23 @@ function initializeTrack(
             );
 
             return;
-        }
 
+        }
 
         if (audio.paused) {
-            return;
-        }
 
+            return;
+
+        }
 
         if (fadeOutActive) {
-            return;
-        }
 
+            return;
+
+        }
 
         fadeOutActive =
             true;
-
 
         if (fadeInTimer) {
 
@@ -1241,32 +1922,28 @@ function initializeTrack(
                 fadeInTimer
             );
 
-            fadeInTimer = null;
-        }
+            fadeInTimer =
+                null;
 
+        }
 
         const startingVolume =
             audio.volume;
-
 
         const duration =
             getFadeOutDuration() *
             1000;
 
-
         const startTime =
             Date.now();
-
 
         updateFadeOutVisual();
 
         fadeOutButton.disabled =
             true;
 
-
         trackStatus.textContent =
             "Fading out";
-
 
         fadeOutTimer =
             setInterval(
@@ -1278,7 +1955,8 @@ function initializeTrack(
                             fadeOutTimer
                         );
 
-                        fadeOutTimer = null;
+                        fadeOutTimer =
+                            null;
 
                         fadeOutActive =
                             false;
@@ -1289,13 +1967,12 @@ function initializeTrack(
                             false;
 
                         return;
-                    }
 
+                    }
 
                     const elapsed =
                         Date.now() -
                         startTime;
-
 
                     const progress =
                         Math.min(
@@ -1304,14 +1981,12 @@ function initializeTrack(
                             1
                         );
 
-
                     audio.volume =
                         Math.max(
                             0,
                             startingVolume *
                             (1 - progress)
                         );
-
 
                     if (
                         progress >= 1
@@ -1324,43 +1999,36 @@ function initializeTrack(
                         fadeOutTimer =
                             null;
 
-
                         audio.pause();
-
 
                         audio.volume =
                             baseVolume;
 
-
                         fadeOutActive =
                             false;
 
-
                         updateFadeOutVisual();
-
 
                         fadeOutButton.disabled =
                             false;
 
-
                         playButton.textContent =
                             "▶";
-
 
                         trackStatus.textContent =
                             "Faded out";
 
-
                         setActivityPlaying(
                             false
                         );
+
                     }
 
                 },
                 40
             );
-    }
 
+    }
 
     /* =====================================================
        LOAD AUDIO
@@ -1375,14 +2043,11 @@ function initializeTrack(
                     "input"
                 );
 
-
             fileInput.type =
                 "file";
 
-
             fileInput.accept =
                 "audio/*";
-
 
             fileInput.addEventListener(
                 "change",
@@ -1391,24 +2056,24 @@ function initializeTrack(
                     const file =
                         fileInput.files[0];
 
-
                     if (!file) {
-                        return;
-                    }
 
+                        return;
+
+                    }
 
                     loadFile(
                         file,
                         true
                     );
+
                 }
             );
 
-
             fileInput.click();
+
         }
     );
-
 
     /* =====================================================
        LOAD FILE
@@ -1421,32 +2086,29 @@ function initializeTrack(
 
         stopFadeTimers();
 
-
         fadeOutActive =
             false;
 
-
         updateFadeOutVisual();
-
 
         fadeOutButton.disabled =
             false;
-
 
         setActivityPlaying(
             false
         );
 
-
         if (audio) {
 
             audio.pause();
 
-            audio.src = "";
+            audio.src =
+                "";
 
-            audio = null;
+            audio =
+                null;
+
         }
-
 
         if (audioUrl) {
 
@@ -1454,46 +2116,39 @@ function initializeTrack(
                 audioUrl
             );
 
-            audioUrl = null;
-        }
+            audioUrl =
+                null;
 
+        }
 
         currentFile =
             file;
-
 
         audioUrl =
             URL.createObjectURL(
                 file
             );
 
-
         audio =
             new Audio();
-
 
         audio.src =
             audioUrl;
 
-
         audio.preload =
             "auto";
-
 
         audio.loop =
             loopEnabled &&
             !rangeLoopEnabled;
-
 
         baseVolume =
             Number(
                 volumeSlider.value
             ) / 100;
 
-
         audio.volume =
             baseVolume;
-
 
         /* =================================================
            LOADED METADATA
@@ -1506,18 +2161,14 @@ function initializeTrack(
                 seekBar.max =
                     audio.duration;
 
-
                 seekBar.value =
                     0;
-
 
                 rangeStartInput.max =
                     audio.duration;
 
-
                 rangeEndInput.max =
                     audio.duration;
-
 
                 if (resetRange) {
 
@@ -1531,32 +2182,27 @@ function initializeTrack(
                         "0";
 
                     rangeEndInput.value =
-                        audio.duration
-                            .toFixed(1);
-                }
+                        audio.duration.toFixed(1);
 
+                }
 
                 currentTimeDisplay.textContent =
                     "00:00";
-
 
                 totalTimeDisplay.textContent =
                     formatTime(
                         audio.duration
                     );
 
-
                 updateRangeHighlight();
-
 
                 trackStatus.textContent =
                     "Ready to play";
 
-
                 scheduleAutoSave();
+
             }
         );
-
 
         /* =================================================
            PLAY
@@ -1569,9 +2215,9 @@ function initializeTrack(
                 setActivityPlaying(
                     true
                 );
+
             }
         );
-
 
         /* =================================================
            PAUSE
@@ -1586,10 +2232,11 @@ function initializeTrack(
                     setActivityPlaying(
                         false
                     );
+
                 }
+
             }
         );
-
 
         /* =================================================
            ENDED
@@ -1602,17 +2249,15 @@ function initializeTrack(
                 playButton.textContent =
                     "▶";
 
-
                 trackStatus.textContent =
                     "Finished";
-
 
                 setActivityPlaying(
                     false
                 );
+
             }
         );
-
 
         /* =================================================
            ERROR
@@ -1625,17 +2270,15 @@ function initializeTrack(
                 trackStatus.textContent =
                     "Unable to load audio";
 
-
                 playButton.textContent =
                     "▶";
-
 
                 setActivityPlaying(
                     false
                 );
+
             }
         );
-
 
         /* =================================================
            TIME UPDATE
@@ -1651,8 +2294,8 @@ function initializeTrack(
                 ) {
 
                     return;
-                }
 
+                }
 
                 /* CUSTOM RANGE LOOP */
 
@@ -1665,27 +2308,24 @@ function initializeTrack(
 
                     audio.currentTime =
                         rangeStart;
-                }
 
+                }
 
                 /* SEEK BAR */
 
                 seekBar.value =
                     audio.currentTime;
 
-
                 currentTimeDisplay.textContent =
                     formatTime(
                         audio.currentTime
                     );
-
 
                 /* AUTOMATIC 5 SECOND END FADE */
 
                 const timeRemaining =
                     audio.duration -
                     audio.currentTime;
-
 
                 if (
                     !loopEnabled &&
@@ -1701,27 +2341,24 @@ function initializeTrack(
                             timeRemaining /
                             5
                         );
+
                 }
 
             }
         );
 
-
         trackName.textContent =
             file.name;
-
 
         trackStatus.textContent =
             "Ready to play";
 
-
         playButton.textContent =
             "▶";
 
-
         scheduleAutoSave();
-    }
 
+    }
 
     /* =====================================================
        PLAY / PAUSE
@@ -1738,8 +2375,8 @@ function initializeTrack(
                 );
 
                 return;
-            }
 
+            }
 
             if (audio.paused) {
 
@@ -1747,20 +2384,19 @@ function initializeTrack(
                     rangeLoopEnabled &&
                     (
                         audio.currentTime <
-                            rangeStart ||
+                        rangeStart ||
                         audio.currentTime >=
-                            rangeEnd
+                        rangeEnd
                     )
                 ) {
 
                     audio.currentTime =
                         rangeStart;
-                }
 
+                }
 
                 fadeOutActive =
                     false;
-
 
                 if (fadeOutTimer) {
 
@@ -1770,23 +2406,19 @@ function initializeTrack(
 
                     fadeOutTimer =
                         null;
+
                 }
 
-
                 updateFadeOutVisual();
-
 
                 fadeOutButton.disabled =
                     false;
 
-
                 audio.volume =
                     baseVolume;
 
-
                 const playPromise =
                     audio.play();
-
 
                 if (
                     playPromise !==
@@ -1800,12 +2432,11 @@ function initializeTrack(
                                 playButton.textContent =
                                     "Ⅱ";
 
-
                                 trackStatus.textContent =
                                     "Playing";
 
-
                                 startFadeIn();
+
                             }
                         )
                         .catch(
@@ -1813,37 +2444,35 @@ function initializeTrack(
 
                                 trackStatus.textContent =
                                     "Unable to play audio";
+
                             }
                         );
+
                 }
 
             } else {
 
                 audio.pause();
 
-
                 stopFadeTimers();
-
 
                 audio.volume =
                     baseVolume;
 
-
                 playButton.textContent =
                     "▶";
-
 
                 trackStatus.textContent =
                     "Paused";
 
-
                 setActivityPlaying(
                     false
                 );
+
             }
+
         }
     );
-
 
     /* =====================================================
        SEEK BAR
@@ -1854,15 +2483,15 @@ function initializeTrack(
         function () {
 
             if (!audio) {
-                return;
-            }
 
+                return;
+
+            }
 
             let newPosition =
                 Number(
                     seekBar.value
                 );
-
 
             if (rangeLoopEnabled) {
 
@@ -1873,8 +2502,8 @@ function initializeTrack(
 
                     newPosition =
                         rangeStart;
-                }
 
+                }
 
                 if (
                     newPosition >
@@ -1883,25 +2512,24 @@ function initializeTrack(
 
                     newPosition =
                         rangeEnd;
-                }
 
+                }
 
                 seekBar.value =
                     newPosition;
-            }
 
+            }
 
             audio.currentTime =
                 newPosition;
-
 
             currentTimeDisplay.textContent =
                 formatTime(
                     newPosition
                 );
+
         }
     );
-
 
     /* =====================================================
        VOLUME
@@ -1916,7 +2544,6 @@ function initializeTrack(
                     volumeSlider.value
                 ) / 100;
 
-
             if (
                 audio &&
                 !fadeOutActive
@@ -1924,13 +2551,13 @@ function initializeTrack(
 
                 audio.volume =
                     baseVolume;
+
             }
 
-
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        FULL TRACK LOOP
@@ -1947,27 +2574,21 @@ function initializeTrack(
                 );
 
                 return;
-            }
 
+            }
 
             loopEnabled =
                 !loopEnabled;
 
-
-            /*
-             IMPORTANT:
-             Range looping remains its own system.
-             */
-
-            if (rangeLoopEnabled) {
+            if (
+                rangeLoopEnabled
+            ) {
 
                 audio.loop =
                     false;
 
-
                 audio.volume =
                     baseVolume;
-
 
                 trackStatus.textContent =
                     "Range loop: " +
@@ -1979,15 +2600,15 @@ function initializeTrack(
                         rangeEnd
                     );
 
-            } else if (loopEnabled) {
+            } else if (
+                loopEnabled
+            ) {
 
                 audio.loop =
                     true;
 
-
                 audio.volume =
                     baseVolume;
-
 
                 trackStatus.textContent =
                     "Full track loop";
@@ -1996,7 +2617,6 @@ function initializeTrack(
 
                 audio.loop =
                     false;
-
 
                 if (!audio.paused) {
 
@@ -2007,9 +2627,10 @@ function initializeTrack(
 
                     trackStatus.textContent =
                         "Paused";
-                }
-            }
 
+                }
+
+            }
 
             updateLoopVisual();
 
@@ -2018,9 +2639,9 @@ function initializeTrack(
             updateRangeHighlight();
 
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        RANGE LOOP
@@ -2037,20 +2658,18 @@ function initializeTrack(
                 );
 
                 return;
-            }
 
+            }
 
             const start =
                 Number(
                     rangeStartInput.value
                 );
 
-
             const end =
                 Number(
                     rangeEndInput.value
                 );
-
 
             if (
                 isNaN(start) ||
@@ -2062,8 +2681,8 @@ function initializeTrack(
                 );
 
                 return;
-            }
 
+            }
 
             if (start < 0) {
 
@@ -2072,8 +2691,8 @@ function initializeTrack(
                 );
 
                 return;
-            }
 
+            }
 
             if (end <= start) {
 
@@ -2082,8 +2701,8 @@ function initializeTrack(
                 );
 
                 return;
-            }
 
+            }
 
             if (
                 audio.duration &&
@@ -2095,51 +2714,42 @@ function initializeTrack(
                 );
 
                 return;
-            }
 
+            }
 
             rangeStart =
                 start;
 
-
             rangeEnd =
                 end;
-
 
             rangeLoopEnabled =
                 !rangeLoopEnabled;
 
-
-            if (rangeLoopEnabled) {
-
-                /*
-                 RANGE becomes active.
-                 LOOP setting is NOT changed.
-                 */
+            if (
+                rangeLoopEnabled
+            ) {
 
                 audio.loop =
                     false;
 
-
                 audio.volume =
                     baseVolume;
 
-
                 if (
                     audio.currentTime <
-                        rangeStart ||
+                    rangeStart ||
                     audio.currentTime >=
-                        rangeEnd
+                    rangeEnd
                 ) {
 
                     audio.currentTime =
                         rangeStart;
 
-
                     seekBar.value =
                         rangeStart;
-                }
 
+                }
 
                 trackStatus.textContent =
                     "Range loop: " +
@@ -2153,21 +2763,17 @@ function initializeTrack(
 
             } else {
 
-                /*
-                 RANGE is OFF.
-                 Full LOOP can resume if it is ON.
-                 */
-
                 audio.loop =
                     loopEnabled;
-
 
                 if (loopEnabled) {
 
                     trackStatus.textContent =
                         "Full track loop";
 
-                } else if (audio.paused) {
+                } else if (
+                    audio.paused
+                ) {
 
                     trackStatus.textContent =
                         "Paused";
@@ -2176,9 +2782,10 @@ function initializeTrack(
 
                     trackStatus.textContent =
                         "Playing";
-                }
-            }
 
+                }
+
+            }
 
             updateLoopVisual();
 
@@ -2187,9 +2794,9 @@ function initializeTrack(
             updateRangeHighlight();
 
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        RANGE START
@@ -2200,22 +2807,22 @@ function initializeTrack(
         function () {
 
             if (!audio) {
-                return;
-            }
 
+                return;
+
+            }
 
             let value =
                 Number(
                     rangeStartInput.value
                 );
 
-
             if (value < 0) {
 
                 value =
                     0;
-            }
 
+            }
 
             if (
                 audio.duration &&
@@ -2228,16 +2835,14 @@ function initializeTrack(
                         audio.duration -
                         0.1
                     );
-            }
 
+            }
 
             rangeStartInput.value =
                 value.toFixed(1);
 
-
             rangeStart =
                 value;
-
 
             if (
                 rangeEnd <=
@@ -2251,18 +2856,17 @@ function initializeTrack(
                         0.1
                     );
 
-
                 rangeEndInput.value =
                     rangeEnd.toFixed(1);
-            }
 
+            }
 
             updateRangeHighlight();
 
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        RANGE END
@@ -2273,15 +2877,15 @@ function initializeTrack(
         function () {
 
             if (!audio) {
-                return;
-            }
 
+                return;
+
+            }
 
             let value =
                 Number(
                     rangeEndInput.value
                 );
-
 
             if (
                 value <=
@@ -2294,8 +2898,8 @@ function initializeTrack(
                         rangeStart +
                         0.1
                     );
-            }
 
+            }
 
             if (
                 audio.duration &&
@@ -2305,23 +2909,21 @@ function initializeTrack(
 
                 value =
                     audio.duration;
-            }
 
+            }
 
             rangeEndInput.value =
                 value.toFixed(1);
 
-
             rangeEnd =
                 value;
-
 
             updateRangeHighlight();
 
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        FADE IN ON / OFF
@@ -2334,13 +2936,12 @@ function initializeTrack(
             fadeInEnabled =
                 !fadeInEnabled;
 
-
             updateFadeInVisual();
 
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        FADE IN DURATION
@@ -2355,7 +2956,6 @@ function initializeTrack(
                     fadeInDurationInput.value
                 );
 
-
             if (
                 !isFinite(value) ||
                 value <= 0
@@ -2363,24 +2963,23 @@ function initializeTrack(
 
                 value =
                     2;
-            }
 
+            }
 
             if (value > 60) {
 
                 value =
                     60;
-            }
 
+            }
 
             fadeInDurationInput.value =
                 value;
 
-
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        FADE OUT
@@ -2391,9 +2990,9 @@ function initializeTrack(
         function () {
 
             startFadeOut();
+
         }
     );
-
 
     /* =====================================================
        FADE OUT DURATION
@@ -2408,7 +3007,6 @@ function initializeTrack(
                     fadeOutDurationInput.value
                 );
 
-
             if (
                 !isFinite(value) ||
                 value <= 0
@@ -2416,24 +3014,23 @@ function initializeTrack(
 
                 value =
                     2;
-            }
 
+            }
 
             if (value > 60) {
 
                 value =
                     60;
-            }
 
+            }
 
             fadeOutDurationInput.value =
                 value;
 
-
             scheduleAutoSave();
+
         }
     );
-
 
     /* =====================================================
        TRACK OBJECT
@@ -2447,9 +3044,6 @@ function initializeTrack(
         index:
             index,
 
-        file:
-            currentFile,
-
         loadFile:
             function (file) {
 
@@ -2460,10 +3054,13 @@ function initializeTrack(
                     file,
                     false
                 );
+
             },
 
         get file() {
+
             return currentFile;
+
         },
 
         volumeSlider:
@@ -2482,10 +3079,13 @@ function initializeTrack(
             fadeOutDurationInput,
 
         get loopEnabled() {
+
             return loopEnabled;
+
         },
 
         set loopEnabled(value) {
+
             loopEnabled =
                 Boolean(value);
 
@@ -2496,14 +3096,19 @@ function initializeTrack(
                 audio.loop =
                     loopEnabled &&
                     !rangeLoopEnabled;
+
             }
+
         },
 
         get rangeLoopEnabled() {
+
             return rangeLoopEnabled;
+
         },
 
         set rangeLoopEnabled(value) {
+
             rangeLoopEnabled =
                 Boolean(value);
 
@@ -2514,18 +3119,24 @@ function initializeTrack(
                 audio.loop =
                     loopEnabled &&
                     !rangeLoopEnabled;
+
             }
+
         },
 
         get fadeInEnabled() {
+
             return fadeInEnabled;
+
         },
 
         set fadeInEnabled(value) {
+
             fadeInEnabled =
                 Boolean(value);
 
             updateFadeInVisual();
+
         },
 
         setRangeValues:
@@ -2547,11 +3158,14 @@ function initializeTrack(
                     rangeEnd.toFixed(1);
 
                 updateRangeHighlight();
+
             },
 
         getAudio:
             function () {
+
                 return audio;
+
             },
 
         setTrackName:
@@ -2559,6 +3173,7 @@ function initializeTrack(
 
                 trackName.textContent =
                     name;
+
             },
 
         setStatus:
@@ -2566,6 +3181,7 @@ function initializeTrack(
 
                 trackStatus.textContent =
                     status;
+
             },
 
         setBaseVolume:
@@ -2583,10 +3199,12 @@ function initializeTrack(
 
                     audio.volume =
                         baseVolume;
-                }
-            }
-    };
 
+                }
+
+            }
+
+    };
 
     updateLoopVisual();
 
@@ -2596,10 +3214,9 @@ function initializeTrack(
 
     updateFadeOutVisual();
 
-
     return trackObject;
-}
 
+}
 
 /* =========================================================
    CREATE SOUNDBOARD
@@ -2612,7 +3229,6 @@ function createSoundboard(
     count =
         Number(count);
 
-
     if (
         !isFinite(count) ||
         count < 1
@@ -2620,23 +3236,18 @@ function createSoundboard(
 
         count =
             1;
-    }
 
+    }
 
     if (count > 100) {
 
         count =
             100;
-    }
 
+    }
 
     trackCountInput.value =
         count;
-
-
-    /*
-     Stop old tracks before replacing them.
-     */
 
     tracks.forEach(
         function (item) {
@@ -2648,19 +3259,19 @@ function createSoundboard(
 
                 audio.pause();
 
-                audio.src = "";
+                audio.src =
+                    "";
+
             }
+
         }
     );
-
 
     tracksContainer.innerHTML =
         "";
 
-
     tracks =
         [];
-
 
     for (
         let i = 0;
@@ -2673,23 +3284,21 @@ function createSoundboard(
                 i
             );
 
-
         const trackObject =
             initializeTrack(
                 track,
                 i
             );
 
-
         tracks.push(
             trackObject
         );
+
     }
 
-
     scheduleAutoSave();
-}
 
+}
 
 /* =========================================================
    CREATE BUTTON
@@ -2704,7 +3313,6 @@ createBoardButton.addEventListener(
                 trackCountInput.value
             );
 
-
         if (
             !isFinite(count) ||
             count < 1 ||
@@ -2716,12 +3324,11 @@ createBoardButton.addEventListener(
             );
 
             return;
-        }
 
+        }
 
         const hasExistingTracks =
             tracks.length > 0;
-
 
         if (hasExistingTracks) {
 
@@ -2730,19 +3337,36 @@ createBoardButton.addEventListener(
                     "Creating a new soundboard will replace the current tracks. Continue?"
                 );
 
-
             if (!confirmed) {
+
                 return;
+
             }
+
         }
 
+        currentShowId =
+            null;
+
+        currentShowName =
+            null;
+
+        showNameInput.value =
+            "";
+
+        showSelect.value =
+            "";
 
         createSoundboard(
             count
         );
+
+        setShowStatus(
+            "NEW SOUNDBOARD READY"
+        );
+
     }
 );
-
 
 /* =========================================================
    MANUAL SAVE BUTTON
@@ -2757,9 +3381,9 @@ saveSetupButton.addEventListener(
         setSaveStatus(
             "SAVED ✓"
         );
+
     }
 );
-
 
 /* =========================================================
    CLEAR SAVED SETUP
@@ -2774,11 +3398,11 @@ clearSetupButton.addEventListener(
                 "This will delete the saved SURYACUE setup and audio files from this browser. Continue?"
             );
 
-
         if (!confirmed) {
-            return;
-        }
 
+            return;
+
+        }
 
         try {
 
@@ -2786,11 +3410,26 @@ clearSetupButton.addEventListener(
                 "currentSetup"
             );
 
+            await databaseDelete(
+                "currentShow"
+            );
+
+            currentShowId =
+                null;
+
+            currentShowName =
+                null;
+
+            showNameInput.value =
+                "";
 
             setSaveStatus(
                 "SAVED SETUP CLEARED"
             );
 
+            setShowStatus(
+                "CURRENT SETUP CLEARED"
+            );
 
             createSoundboard(
                 Number(
@@ -2807,10 +3446,142 @@ clearSetupButton.addEventListener(
             setSaveStatus(
                 "CLEAR ERROR"
             );
+
         }
+
     }
 );
 
+/* =========================================================
+   RESTORE SETUP DATA
+   ========================================================= */
+
+async function restoreSetupData(
+    savedSetup
+) {
+
+    if (
+        !savedSetup ||
+        !savedSetup.tracks
+    ) {
+
+        createSoundboardWithoutSave(
+            12
+        );
+
+        return;
+
+    }
+
+    createSoundboardWithoutSave(
+        savedSetup.trackCount
+    );
+
+    for (
+        let i = 0;
+        i < savedSetup.tracks.length;
+        i++
+    ) {
+
+        const savedTrack =
+            savedSetup.tracks[i];
+
+        const item =
+            tracks[i];
+
+        if (!item) {
+
+            continue;
+
+        }
+
+        /* VOLUME */
+
+        if (
+            savedTrack.volume !==
+            undefined
+        ) {
+
+            item.setBaseVolume(
+                savedTrack.volume /
+                100
+            );
+
+        }
+
+        /* RANGE */
+
+        item.setRangeValues(
+            savedTrack.rangeStart || 0,
+            savedTrack.rangeEnd || 0
+        );
+
+        /* FADE IN */
+
+        item.fadeInEnabled =
+            savedTrack.fadeInEnabled ||
+            false;
+
+        item.fadeInDurationInput.value =
+            savedTrack.fadeInDuration ||
+            2;
+
+        /* FADE OUT */
+
+        item.fadeOutDurationInput.value =
+            savedTrack.fadeOutDuration ||
+            2;
+
+        /* LOOP STATES */
+
+        item.loopEnabled =
+            savedTrack.loopEnabled ||
+            false;
+
+        item.rangeLoopEnabled =
+            savedTrack.rangeLoopEnabled ||
+            false;
+
+        /* RESTORE ACTUAL AUDIO FILE */
+
+        if (
+            savedTrack.file
+        ) {
+
+            await new Promise(
+                function (resolve) {
+
+                    const file =
+                        new File(
+                            [
+                                savedTrack.file
+                            ],
+                            savedTrack.fileName ||
+                            "audio",
+                            {
+                                type:
+                                    savedTrack.file.type ||
+                                    "audio/mpeg"
+                            }
+                        );
+
+                    item.loadFile(
+                        file
+                    );
+
+                    setTimeout(
+                        resolve,
+                        250
+                    );
+
+                }
+            );
+
+        }
+
+    }
+
+}
 
 /* =========================================================
    RESTORE SETUP
@@ -2825,6 +3596,25 @@ async function restoreSetup() {
                 "currentSetup"
             );
 
+        const savedCurrentShow =
+            await databaseGet(
+                "currentShow"
+            );
+
+        if (
+            savedCurrentShow
+        ) {
+
+            currentShowId =
+                savedCurrentShow.id;
+
+            currentShowName =
+                savedCurrentShow.name;
+
+            showNameInput.value =
+                currentShowName;
+
+        }
 
         if (
             !savedSetup ||
@@ -2840,137 +3630,22 @@ async function restoreSetup() {
             );
 
             return;
-        }
 
+        }
 
         isRestoring =
             true;
 
-
-        createSoundboardWithoutSave(
-            savedSetup.trackCount
+        await restoreSetupData(
+            savedSetup
         );
-
-
-        for (
-            let i = 0;
-            i < savedSetup.tracks.length;
-            i++
-        ) {
-
-            const savedTrack =
-                savedSetup.tracks[i];
-
-
-            const item =
-                tracks[i];
-
-
-            if (!item) {
-                continue;
-            }
-
-
-            /* VOLUME */
-
-            if (
-                savedTrack.volume !==
-                undefined
-            ) {
-
-                item.setBaseVolume(
-                    savedTrack.volume /
-                    100
-                );
-            }
-
-
-            /* RANGE */
-
-            item.setRangeValues(
-                savedTrack.rangeStart || 0,
-                savedTrack.rangeEnd || 0
-            );
-
-
-            /* FADE IN */
-
-            item.fadeInEnabled =
-                savedTrack.fadeInEnabled ||
-                false;
-
-
-            item.fadeInDurationInput.value =
-                savedTrack.fadeInDuration ||
-                2;
-
-
-            /* FADE OUT */
-
-            item.fadeOutDurationInput.value =
-                savedTrack.fadeOutDuration ||
-                2;
-
-
-            /* LOOP STATES */
-
-            item.loopEnabled =
-                savedTrack.loopEnabled ||
-                false;
-
-
-            item.rangeLoopEnabled =
-                savedTrack.rangeLoopEnabled ||
-                false;
-
-
-            /*
-             Restore the actual audio file.
-             */
-
-            if (savedTrack.file) {
-
-                await new Promise(
-                    function (resolve) {
-
-                        const file =
-                            new File(
-                                [
-                                    savedTrack.file
-                                ],
-                                savedTrack.fileName ||
-                                    "audio",
-                                {
-                                    type:
-                                        savedTrack.file.type ||
-                                        "audio/mpeg"
-                                }
-                            );
-
-
-                        item.loadFile(
-                            file
-                        );
-
-
-                        setTimeout(
-                            resolve,
-                            250
-                        );
-                    }
-                );
-            }
-        }
-
 
         isRestoring =
             false;
 
-
         setSaveStatus(
             "SETUP RESTORED ✓"
         );
-
 
     } catch (error) {
 
@@ -2979,22 +3654,20 @@ async function restoreSetup() {
             error
         );
 
-
         isRestoring =
             false;
-
 
         createSoundboard(
             12
         );
 
-
         setSaveStatus(
             "RESTORE ERROR"
         );
-    }
-}
 
+    }
+
+}
 
 /* =========================================================
    CREATE WITHOUT SAVE
@@ -3007,7 +3680,6 @@ function createSoundboardWithoutSave(
     count =
         Number(count);
 
-
     if (
         !isFinite(count) ||
         count < 1
@@ -3015,27 +3687,24 @@ function createSoundboardWithoutSave(
 
         count =
             12;
-    }
 
+    }
 
     if (count > 100) {
 
         count =
             100;
-    }
 
+    }
 
     trackCountInput.value =
         count;
 
-
     tracksContainer.innerHTML =
         "";
 
-
     tracks =
         [];
-
 
     for (
         let i = 0;
@@ -3048,20 +3717,87 @@ function createSoundboardWithoutSave(
                 i
             );
 
-
         const trackObject =
             initializeTrack(
                 track,
                 i
             );
 
-
         tracks.push(
             trackObject
         );
+
     }
+
 }
 
+/* =========================================================
+   SHOW LIBRARY BUTTONS
+   ========================================================= */
+
+newShowButton.addEventListener(
+    "click",
+    async function () {
+
+        await startNewShow();
+
+    }
+);
+
+saveShowButton.addEventListener(
+    "click",
+    async function () {
+
+        await saveAsShow();
+
+    }
+);
+
+loadShowButton.addEventListener(
+    "click",
+    async function () {
+
+        await loadSavedShow();
+
+    }
+);
+
+deleteShowButton.addEventListener(
+    "click",
+    async function () {
+
+        await deleteSavedShow();
+
+    }
+);
+
+showSelect.addEventListener(
+    "change",
+    function () {
+
+        const selectedId =
+            showSelect.value;
+
+        if (!selectedId) {
+
+            return;
+
+        }
+
+        const selectedOption =
+            showSelect.options[
+                showSelect.selectedIndex
+            ];
+
+        if (selectedOption) {
+
+            showNameInput.value =
+                selectedOption.textContent;
+
+        }
+
+    }
+);
 
 /* =========================================================
    START SURYACUE
@@ -3073,7 +3809,18 @@ async function startSuryacue() {
 
         await openDatabase();
 
+        await refreshShowList();
+
         await restoreSetup();
+
+        await refreshShowList();
+
+        if (currentShowId) {
+
+            showSelect.value =
+                currentShowId;
+
+        }
 
     } catch (error) {
 
@@ -3082,17 +3829,16 @@ async function startSuryacue() {
             error
         );
 
-
         createSoundboard(
             12
         );
 
-
         setSaveStatus(
             "LOCAL STORAGE ERROR"
         );
-    }
-}
 
+    }
+
+}
 
 startSuryacue();

@@ -1,32 +1,201 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>SURYA CUE</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
+
 </head>
 
 <body>
 
     <header class="top-bar">
+
         <div class="logo">
+
             <span class="logo-dot"></span>
+
             SURYA CUE
+
         </div>
 
         <div class="subtitle">
+
             STAGE AUDIO CONTROL
+
         </div>
+
     </header>
 
     <main class="soundboard">
 
         <div class="welcome">
+
             <h1>Your Soundboard</h1>
+
             <p>Load your tracks and control them from one place.</p>
+
         </div>
+
+        <!-- SHOW LIBRARY -->
+
+        <section
+            class="show-library-panel"
+            style="
+                background:#1a1a1a;
+                border:1px solid #303030;
+                border-radius:14px;
+                padding:16px;
+                margin-bottom:22px;
+            "
+        >
+
+            <div
+                style="
+                    color:#999999;
+                    font-size:10px;
+                    font-weight:700;
+                    letter-spacing:1px;
+                    margin-bottom:12px;
+                "
+            >
+                SHOW LIBRARY
+            </div>
+
+            <div
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    flex-wrap:wrap;
+                "
+            >
+
+                <button
+                    id="new-show-button"
+                    title="Start a fresh blank soundboard without touching your saved shows"
+                    style="
+                        background:#20d47a;
+                        color:#07150d;
+                        border:1px solid #20d47a;
+                        padding:11px 16px;
+                        border-radius:8px;
+                        font-size:10px;
+                        font-weight:700;
+                        letter-spacing:1px;
+                        cursor:pointer;
+                    "
+                >
+                    + NEW SHOW
+                </button>
+
+                <input
+                    id="show-name-input"
+                    type="text"
+                    placeholder="SHOW NAME"
+                    maxlength="100"
+                    style="
+                        width:220px;
+                        padding:11px 12px;
+                        background:#111111;
+                        color:#ffffff;
+                        border:1px solid #3b3b3b;
+                        border-radius:7px;
+                        font-size:11px;
+                        outline:none;
+                    "
+                >
+
+                <button
+                    id="save-show-button"
+                    style="
+                        background:#ff6a00;
+                        color:#ffffff;
+                        border:1px solid #ff6a00;
+                        padding:11px 15px;
+                        border-radius:8px;
+                        font-size:10px;
+                        font-weight:700;
+                        letter-spacing:1px;
+                        cursor:pointer;
+                    "
+                >
+                    SAVE AS SHOW
+                </button>
+
+                <select
+                    id="show-select"
+                    style="
+                        width:220px;
+                        padding:11px 10px;
+                        background:#111111;
+                        color:#ffffff;
+                        border:1px solid #3b3b3b;
+                        border-radius:7px;
+                        font-size:11px;
+                        outline:none;
+                    "
+                >
+                    <option value="">NO SAVED SHOWS</option>
+                </select>
+
+                <button
+                    id="load-show-button"
+                    style="
+                        background:#292929;
+                        color:#ffffff;
+                        border:1px solid #3b3b3b;
+                        padding:11px 15px;
+                        border-radius:8px;
+                        font-size:10px;
+                        font-weight:700;
+                        letter-spacing:1px;
+                        cursor:pointer;
+                    "
+                >
+                    LOAD SHOW
+                </button>
+
+                <button
+                    id="delete-show-button"
+                    style="
+                        background:#292929;
+                        color:#ffffff;
+                        border:1px solid #3b3b3b;
+                        padding:11px 15px;
+                        border-radius:8px;
+                        font-size:10px;
+                        font-weight:700;
+                        letter-spacing:1px;
+                        cursor:pointer;
+                    "
+                >
+                    DELETE SHOW
+                </button>
+
+            </div>
+
+            <div
+                id="show-status"
+                style="
+                    color:#20d47a;
+                    font-size:10px;
+                    font-weight:700;
+                    letter-spacing:1px;
+                    margin-top:12px;
+                "
+            >
+                SHOW LIBRARY READY
+            </div>
+
+        </section>
 
         <!-- SOUND BOARD SETUP -->
 
@@ -139,7 +308,6 @@
 
         </section>
 
-
         <!-- TRACKS ARE CREATED HERE -->
 
         <section class="tracks" id="tracks-container"></section>
@@ -147,10 +315,13 @@
     </main>
 
     <footer>
+
         SURYACUE
+
     </footer>
 
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=5"></script>
 
 </body>
+
 </html>

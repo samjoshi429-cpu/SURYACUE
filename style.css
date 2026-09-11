@@ -133,18 +133,22 @@ body {
 
     display: grid;
 
+    /* Explicit named areas keep every control in its own cell at every
+       breakpoint, so nothing can overlap or get pushed off elsewhere. */
     grid-template-columns:
         52px
-        minmax(180px, 1fr)
-        125px
-        55px
-        210px;
+        minmax(160px, 1fr)
+        130px
+        120px
+        52px
+        120px
+        190px;
 
-    grid-template-rows:
-        auto
-        auto
-        auto
-        auto;
+    grid-template-areas:
+        "num info activity load play loop volume"
+        "timeline timeline timeline timeline timeline timeline timeline"
+        "range range range range range range range"
+        "fade fade fade fade fade fade fade";
 
     column-gap: 16px;
     row-gap: 14px;
@@ -166,6 +170,8 @@ body {
    ========================================================= */
 
 .track-number {
+    grid-area: num;
+
     width: 48px;
     height: 48px;
 
@@ -189,6 +195,8 @@ body {
    ========================================================= */
 
 .track-info {
+    grid-area: info;
+
     min-width: 0;
 }
 
@@ -217,7 +225,9 @@ body {
    ========================================================= */
 
 .audio-activity {
-    width: 125px;
+    grid-area: activity;
+
+    width: 100%;
     height: 48px;
 
     background: #090909;
@@ -401,6 +411,8 @@ body {
    ========================================================= */
 
 .play-button {
+    grid-area: play;
+
     width: 52px;
     height: 52px;
 
@@ -440,21 +452,33 @@ body {
    ========================================================= */
 
 .load-button {
+    grid-area: load;
+
+    width: 100%;
+    height: 100%;
+    min-height: 44px;
+
     background: #292929;
     color: #ffffff;
 
     border: 1px solid #3b3b3b;
 
-    padding: 12px 16px;
+    padding: 12px 8px;
 
     border-radius: 8px;
 
     font-size: 10px;
     font-weight: 700;
 
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     transition:
         background 0.15s ease,
@@ -472,7 +496,7 @@ body {
    ========================================================= */
 
 .volume-control {
-    grid-column: 5;
+    grid-area: volume;
 
     width: 100%;
 
@@ -513,7 +537,7 @@ input[type="range"] {
    ========================================================= */
 
 .timeline-container {
-    grid-column: 1 / -1;
+    grid-area: timeline;
 
     width: 100%;
 }
@@ -592,20 +616,27 @@ input[type="range"] {
 /* RANGE ROW */
 
 .range-controls {
-    grid-column: 1 / -1;
+    grid-area: range;
 }
 
 
 /* FADE ROW */
 
 .fade-controls {
-    grid-column: 1 / -1;
+    grid-area: fade;
 }
 
 
 /* =========================================================
    LOOP BUTTON
    ========================================================= */
+
+.loop-button {
+    grid-area: loop;
+
+    width: 100%;
+    height: 100%;
+}
 
 .loop-button,
 .range-loop-button,
@@ -617,16 +648,22 @@ input[type="range"] {
 
     border: 1px solid #3b3b3b;
 
-    padding: 11px 14px;
+    padding: 11px 8px;
 
     border-radius: 8px;
 
     font-size: 10px;
     font-weight: 700;
 
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     transition:
         background 0.15s ease,
@@ -845,51 +882,24 @@ footer {
         grid-template-columns:
             52px
             minmax(150px, 1fr)
-            115px
-            52px;
+            120px
+            56px;
 
-        grid-template-rows:
-            auto
-            auto
-            auto
-            auto;
+        grid-template-areas:
+            "num info activity play"
+            "load load loop loop"
+            "volume volume volume volume"
+            "timeline timeline timeline timeline"
+            "range range range range"
+            "fade fade fade fade";
+
+        row-gap: 12px;
+        column-gap: 14px;
     }
 
-    .audio-activity {
-        grid-column: 3;
-        grid-row: 1;
-    }
-
-    .load-button {
-        grid-column: 4;
-        grid-row: 1;
-    }
-
-    .play-button {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .track-info {
-        grid-column: 2;
-        grid-row: 1;
-    }
-
-    .volume-control {
-        grid-column: 1 / -1;
-        grid-row: 2;
-    }
-
-    .timeline-container {
-        grid-row: 3;
-    }
-
-    .range-controls {
-        grid-row: 4;
-    }
-
-    .fade-controls {
-        grid-row: 5;
+    .load-button,
+    .loop-button {
+        min-height: 46px;
     }
 }
 
@@ -927,13 +937,24 @@ footer {
         display: grid;
 
         grid-template-columns:
-            48px
+            44px
+            1fr
             1fr
             52px;
 
+        grid-template-areas:
+            "num info info play"
+            "activity activity activity activity"
+            "load load loop loop"
+            "volume volume volume volume"
+            "timeline timeline timeline timeline"
+            "range range range range"
+            "fade fade fade fade";
+
         padding: 14px;
 
-        gap: 12px;
+        column-gap: 10px;
+        row-gap: 12px;
     }
 
     .track-number {
@@ -942,53 +963,24 @@ footer {
     }
 
     .track-info {
-        grid-column: 2;
         min-width: 0;
     }
 
     .play-button {
-        grid-column: 3;
-
-        width: 48px;
-        height: 48px;
+        width: 52px;
+        height: 52px;
     }
 
     .audio-activity {
-        grid-column: 1 / -1;
-
-        width: 100%;
         height: 42px;
-
-        order: 2;
     }
 
-    .load-button {
-        grid-column: 1 / -1;
-
-        width: 100%;
-
-        order: 3;
-    }
-
-    .volume-control {
-        grid-column: 1 / -1;
-
-        order: 4;
-
-        width: 100%;
-    }
-
-    .timeline-container {
-        grid-column: 1 / -1;
-
-        order: 5;
+    .load-button,
+    .loop-button {
+        min-height: 48px;
     }
 
     .range-controls {
-        grid-column: 1 / -1;
-
-        order: 6;
-
         flex-wrap: wrap;
     }
 
@@ -1011,10 +1003,6 @@ footer {
     }
 
     .fade-controls {
-        grid-column: 1 / -1;
-
-        order: 7;
-
         flex-wrap: wrap;
     }
 
@@ -1033,5 +1021,53 @@ footer {
 
     .fade-duration input {
         width: 100%;
+    }
+
+    /* Show Library / Setup panels: let inputs and selects take the
+       full row instead of a fixed 220px so nothing overflows on
+       narrow screens. Targets the IDs directly since these controls
+       are styled inline in the HTML. */
+    #show-name-input,
+    #show-select {
+        width: 100% !important;
+        flex: 1 1 100%;
+    }
+
+    #save-show-button,
+    #load-show-button,
+    #delete-show-button,
+    #new-show-button,
+    #create-board-button,
+    #save-setup-button,
+    #clear-setup-button {
+        flex: 1 1 auto;
+    }
+}
+
+
+/* =========================================================
+   SMALL PHONES (360px - 390px)
+   ========================================================= */
+
+@media (max-width: 400px) {
+
+    .track {
+        padding: 12px;
+
+        column-gap: 8px;
+        row-gap: 10px;
+    }
+
+    .load-button,
+    .loop-button,
+    .range-loop-button,
+    .fade-in-button,
+    .fade-out-button {
+        font-size: 9px;
+        padding: 10px 6px;
+    }
+
+    .track-info h2 {
+        font-size: 15px;
     }
 }
