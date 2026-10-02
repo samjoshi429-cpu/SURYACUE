@@ -520,6 +520,67 @@ body {
     width: auto;
 }
 
+.volume-percent-wrap {
+    display: flex;
+    align-items: center;
+
+    gap: 3px;
+
+    flex: 0 0 auto;
+}
+
+.volume-control input.volume-percent-input {
+    width: 38px;
+    flex: none;
+
+    background: #111111;
+    color: #ffffff;
+
+    border: 1px solid #3b3b3b;
+    border-radius: 6px;
+
+    padding: 6px 2px;
+
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+
+    outline: none;
+
+    -moz-appearance: textfield;
+
+    transition: border-color 0.15s ease;
+}
+
+.volume-control input.volume-percent-input:focus {
+    border-color: var(--orange);
+}
+
+.volume-control input.volume-percent-input::-webkit-outer-spin-button,
+.volume-control input.volume-percent-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.volume-percent-sign {
+    color: var(--muted);
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+@media (max-width: 700px) {
+
+    .volume-control input.volume-percent-input {
+        width: 42px;
+
+        padding: 8px 2px;
+
+        font-size: 12px;
+    }
+
+}
+
 
 /* =========================================================
    ALL RANGE INPUTS
