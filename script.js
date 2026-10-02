@@ -1173,6 +1173,26 @@ function createTrackElement(index) {
                 value="100"
             >
 
+            <div class="volume-percent-wrap">
+
+                <input
+                    class="volume-percent-input"
+                    type="number"
+                    inputmode="numeric"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="100"
+                >
+
+                <span class="volume-percent-sign">
+
+                    %
+
+                </span>
+
+            </div>
+
         </div>
 
     `;
@@ -1212,6 +1232,11 @@ function initializeTrack(
     const volumeSlider =
         track.querySelector(
             'input[type="range"]'
+        );
+
+    const volumePercentInput =
+        track.querySelector(
+            ".volume-percent-input"
         );
 
     const trackName =
@@ -2544,6 +2569,9 @@ function initializeTrack(
                     volumeSlider.value
                 ) / 100;
 
+            volumePercentInput.value =
+                volumeSlider.value;
+
             if (
                 audio &&
                 !fadeOutActive
@@ -2555,6 +2583,98 @@ function initializeTrack(
             }
 
             scheduleAutoSave();
+
+        }
+    );
+
+    volumePercentInput.addEventListener(
+        "input",
+        function () {
+
+            let typedValue =
+                parseInt(
+                    volumePercentInput.value,
+                    10
+                );
+
+            if (
+                isNaN(
+                    typedValue
+                )
+            ) {
+
+                /* Let the user keep typing
+                   (e.g. clearing the field)
+                   without forcing a value yet. */
+                return;
+
+            }
+
+            if (typedValue < 0) {
+
+                typedValue = 0;
+
+            }
+
+            if (typedValue > 100) {
+
+                typedValue = 100;
+
+            }
+
+            /* Only rewrite what the user is
+               typing if it was out of range -
+               otherwise leave their keystrokes
+               alone (e.g. typing "4" then "40"). */
+            if (
+                Number(
+                    volumePercentInput.value
+                ) !== typedValue
+            ) {
+
+                volumePercentInput.value =
+                    typedValue;
+
+            }
+
+            baseVolume =
+                typedValue / 100;
+
+            volumeSlider.value =
+                typedValue;
+
+            if (
+                audio &&
+                !fadeOutActive
+            ) {
+
+                audio.volume =
+                    baseVolume;
+
+            }
+
+            scheduleAutoSave();
+
+        }
+    );
+
+    volumePercentInput.addEventListener(
+        "blur",
+        function () {
+
+            if (
+                volumePercentInput.value === "" ||
+                isNaN(
+                    Number(
+                        volumePercentInput.value
+                    )
+                )
+            ) {
+
+                volumePercentInput.value =
+                    volumeSlider.value;
+
+            }
 
         }
     );
@@ -3194,6 +3314,9 @@ function initializeTrack(
                     Math.round(
                         baseVolume * 100
                     );
+
+                volumePercentInput.value =
+                    volumeSlider.value;
 
                 if (audio) {
 
